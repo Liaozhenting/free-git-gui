@@ -1,0 +1,49 @@
+exports.pathToTree = (input, callback) => {
+  let root = [];
+  for (let i=0;i<input.length;i++){
+    let chain = input[i].split("/");
+    let currentHierarchy = root;
+    for(let j = 0; j < chain.length;j++){
+      let wantedNode = chain[j]
+      if(wantedNode === ''){
+        continue;
+      }
+      let lastHierarchy = currentHierarchy;
+
+      // 遍历root是否已有该层级
+      for(let k = 0; k < currentHierarchy.length;k++){
+        if(currentHierarchy[k].title === wantedNode){
+          currentHierarchy = currentHierarchy[k].children;
+          break;
+        }
+      }
+
+      if(lastHierarchy === currentHierarchy) {
+        let key;
+        let newNode;
+        if(j === chain.length - 1){
+          key = input[i];
+          newNode = {
+            key: key,
+            title: wantedNode
+          };
+        } else {
+          key = chain.slice(0,j+1).join('/')+'/';
+          newNode = {
+            key: key,
+            title: wantedNode,
+            isFolder: true,
+            children: []
+          };
+        }
+        if(callback){
+          newNode = callback(newNode);
+        }
+        currentHierarchy.push(newNode);
+        currentHierarchy = newNode.children;
+      }
+    }
+  }
+
+  return root;
+};

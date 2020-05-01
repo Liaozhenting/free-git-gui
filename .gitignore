@@ -10,6 +10,7 @@
 
 # production
 /build
+/free-git-gui-darwin-x64
 
 # misc
 .DS_Store
