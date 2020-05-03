@@ -10,3 +10,6 @@ window.addEventListener('DOMContentLoaded', () => {
     replaceText(`${type}-version`, process.versions[type])
   }
 })
+// 解决模块识别问题 https://blog.csdn.net/weixin_41708853/article/details/97625067
+global.electron = require('electron');
+global.shell = require("shelljs");

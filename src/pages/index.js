@@ -1,11 +1,36 @@
 import React from "react";
 import Tree from "antd/lib/tree";
-import {FolderOutlined, FileOutlined} from "@ant-design/icons"
+import { FolderOutlined, FileOutlined } from "@ant-design/icons";
 import FileDrop from "../compoenents/FileDrop";
-import "./main.css";
+import "./index.css";
 import { pathToTree } from "../utils/files";
+const shell = window.shell;
 
+const { ipcRenderer } = window.electron;
 const { TreeNode } = Tree;
+function getLog() {
+  let _cmd = `git log -1 \
+  --date=iso --pretty=format:'{"commit": "%h","author": "%aN <%aE>","date": "%ad","message": "%s"},' \
+  $@ | \
+  perl -pe 'BEGIN{print "["}; END{print "]\n"}' | \
+  perl -pe 's/},]/}]/'`;
+  return new Promise((resolve, reject) => {
+    shell.exec(_cmd, (code, stdout, stderr) => {
+      if (code) {
+        reject(stderr);
+      } else {
+        resolve(JSON.parse(stdout)[0]);
+      }
+    });
+  });
+}
+
+async function commit() {
+  let _gitLog = await getLog();
+  console.log(_gitLog);
+  return _gitLog;
+}
+
 
 class Page extends React.Component {
   state = {
@@ -19,16 +44,18 @@ class Page extends React.Component {
       return path.replace(rootPath, "");
     });
     console.log(filterFiles);
-    let treeData = pathToTree(filterFiles, (newNode)=>{
-      if(newNode.isFolder){
-        newNode.icon = <FolderOutlined />
+    let treeData = pathToTree(filterFiles, (newNode) => {
+      if (newNode.isFolder) {
+        newNode.icon = <FolderOutlined />;
       } else {
-        newNode.icon = <FileOutlined />
+        newNode.icon = <FileOutlined />;
       }
-      return newNode
+      return newNode;
     });
     console.log(treeData);
     this.setState({ treeData, onWorking: true, rootPath });
+    // console.log("commitLog", commit());
+    commit();
   };
   onSelect = (selectedKeys, info) => {
     console.log("selected", selectedKeys, info);

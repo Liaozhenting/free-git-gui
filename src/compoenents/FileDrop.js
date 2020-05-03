@@ -1,6 +1,5 @@
 import React from "react";
 import { fromEvent } from "file-selector";
-const unbind = [];
 class DropArea extends React.Component {
   constructor(props) {
     super(props);
@@ -24,6 +23,10 @@ class DropArea extends React.Component {
         this.props.onDrop(files, rootPath, rootName);
       }
     });
+  }
+  componentWillUnmount(){
+    this.dropRef.current.removeEventListener("dragover");
+    this.dropRef.current.removeEventListener("drop");
   }
   render() {
     return (

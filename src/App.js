@@ -1,6 +1,6 @@
 import React from 'react';
-import Main from './pages/main';
-import 'antd/dist/antd.css'
+import Main from './pages';
+import 'antd/dist/antd.css';
 import './App.css'
 function App() {
   return (
