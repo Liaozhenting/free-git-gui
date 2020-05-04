@@ -18,7 +18,6 @@ class DropArea extends React.Component {
       console.log('rootPath', rootPath);
       console.log('rootName', rootName);
       const files = await fromEvent(evt);
-      console.log('files', files);
       if (this.props.onDrop) {
         this.props.onDrop(files, rootPath, rootName);
       }

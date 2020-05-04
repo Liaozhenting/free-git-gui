@@ -9,7 +9,7 @@ const shell = window.shell;
 const { ipcRenderer } = window.electron;
 const { TreeNode } = Tree;
 function getLog() {
-  let _cmd = `git log -1 \
+  let _cmd = `git log \
   --date=iso --pretty=format:'{"commit": "%h","author": "%aN <%aE>","date": "%ad","message": "%s"},' \
   $@ | \
   perl -pe 'BEGIN{print "["}; END{print "]\n"}' | \
@@ -19,7 +19,7 @@ function getLog() {
       if (code) {
         reject(stderr);
       } else {
-        resolve(JSON.parse(stdout)[0]);
+        resolve(JSON.parse(stdout));
       }
     });
   });
@@ -30,7 +30,6 @@ async function commit() {
   console.log(_gitLog);
   return _gitLog;
 }
-
 
 class Page extends React.Component {
   state = {
@@ -43,7 +42,6 @@ class Page extends React.Component {
     let filterFiles = files.map(({ path }) => {
       return path.replace(rootPath, "");
     });
-    console.log(filterFiles);
     let treeData = pathToTree(filterFiles, (newNode) => {
       if (newNode.isFolder) {
         newNode.icon = <FolderOutlined />;
@@ -75,12 +73,18 @@ class Page extends React.Component {
             <div>
               工作中
               <p>根路径{rootPath}</p>
-              <Tree
-                showIcon
-                onSelect={this.onSelect}
-                onCheck={this.onCheck}
-                treeData={treeData}
-              />
+              <div
+                className="split-view-view visible"
+                style={{right: '0px', width: '198px',height: '100%', background: '#e4e4e4', overflow: 'scroll'}}
+              >
+                <Tree
+                  style={{background: '#e4e4e4'}}
+                  showIcon
+                  onSelect={this.onSelect}
+                  onCheck={this.onCheck}
+                  treeData={treeData}
+                />
+              </div>
             </div>
           )}
         </FileDrop>
