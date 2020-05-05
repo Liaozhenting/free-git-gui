@@ -9,17 +9,18 @@ const shell = window.shell;
 const { ipcRenderer } = window.electron;
 const { TreeNode } = Tree;
 function getLog() {
-  let _cmd = `git log \
-  --date=iso --pretty=format:'{"commit": "%h","author": "%aN <%aE>","date": "%ad","message": "%s"},' \
-  $@ | \
-  perl -pe 'BEGIN{print "["}; END{print "]\n"}' | \
-  perl -pe 's/},]/}]/'`;
+  // let _cmd = `git log \
+  // --date=iso --pretty=format:'{"commit": "%h","author": "%aN <%aE>","date": "%ad","message": "%s","branch": "%T"},' \
+  // $@ | \
+  // perl -pe 'BEGIN{print "["}; END{print "]\n"}' | \
+  // perl -pe 's/},]/}]/'`;
+  let _cmd = `git log --all --decorate --oneline`;
   return new Promise((resolve, reject) => {
     shell.exec(_cmd, (code, stdout, stderr) => {
       if (code) {
         reject(stderr);
       } else {
-        resolve(JSON.parse(stdout));
+        resolve(stdout.split('\n'));
       }
     });
   });
@@ -31,14 +32,20 @@ async function commit() {
   return _gitLog;
 }
 
+function formatLog() {
+  // TODO
+}
+
 class Page extends React.Component {
   state = {
     treeData: null,
     originData: [],
     onWorking: false,
     rootPath: "",
+    commitLog: []
   };
-  onDrop = (files, rootPath, rooName) => {
+
+  onDrop =async (files, rootPath, rooName) => {
     let filterFiles = files.map(({ path }) => {
       return path.replace(rootPath, "");
     });
@@ -51,10 +58,11 @@ class Page extends React.Component {
       return newNode;
     });
     console.log(treeData);
-    this.setState({ treeData, onWorking: true, rootPath });
-    // console.log("commitLog", commit());
-    commit();
+    
+    let commitLog = await commit();
+    this.setState({ treeData, onWorking: true, rootPath , commitLog: commitLog});
   };
+
   onSelect = (selectedKeys, info) => {
     console.log("selected", selectedKeys, info);
   };
