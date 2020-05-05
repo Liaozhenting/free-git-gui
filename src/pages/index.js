@@ -4,6 +4,7 @@ import { FolderOutlined, FileOutlined } from "@ant-design/icons";
 import FileDrop from "../compoenents/FileDrop";
 import "./index.css";
 import { pathToTree } from "../utils/files";
+import trim from "lodash/trim";
 const shell = window.shell;
 
 const { ipcRenderer } = window.electron;
@@ -20,7 +21,7 @@ function getLog() {
       if (code) {
         reject(stderr);
       } else {
-        resolve(stdout.split('\n'));
+        resolve(stdout.split("\n"));
       }
     });
   });
@@ -32,8 +33,18 @@ async function commit() {
   return _gitLog;
 }
 
-function formatLog() {
-  // TODO
+function formatLog(stdout) {
+  const logReg = /^([0-9a-zA-Z]{7})( \(.*\))?( .*)$/;
+  const logRes = logReg.exec(stdout);
+  console.log(logRes);
+  if (!logRes) {
+    return stdout;
+  }
+  let hash = logRes[1];
+  let branches, message;
+  branches = trim(logRes[2]);
+  message = trim(logRes[3]);
+  return { hash, branches, message };
 }
 
 class Page extends React.Component {
@@ -42,10 +53,10 @@ class Page extends React.Component {
     originData: [],
     onWorking: false,
     rootPath: "",
-    commitLog: []
+    formatLogs: [],
   };
 
-  onDrop =async (files, rootPath, rooName) => {
+  onDrop = async (files, rootPath, rooName) => {
     let filterFiles = files.map(({ path }) => {
       return path.replace(rootPath, "");
     });
@@ -58,9 +69,16 @@ class Page extends React.Component {
       return newNode;
     });
     console.log(treeData);
-    
-    let commitLog = await commit();
-    this.setState({ treeData, onWorking: true, rootPath , commitLog: commitLog});
+
+    let commitLogs = await commit();
+    let formatLogs = commitLogs.map(formatLog);
+    console.log(formatLogs);
+    this.setState({
+      treeData,
+      onWorking: true,
+      rootPath,
+      formatLogs: formatLogs,
+    });
   };
 
   onSelect = (selectedKeys, info) => {
@@ -72,7 +90,7 @@ class Page extends React.Component {
   };
 
   render() {
-    let { treeData, onWorking, rootPath } = this.state;
+    let { treeData, onWorking, rootPath, formatLogs } = this.state;
     return (
       <div className="main">
         <FileDrop onDrop={this.onDrop}>
@@ -83,10 +101,29 @@ class Page extends React.Component {
               <p>根路径{rootPath}</p>
               <div
                 className="split-view-view visible"
-                style={{right: '0px', width: '198px',height: '100%', background: '#e4e4e4', overflow: 'scroll'}}
+                style={{
+                  left: "0px",
+                  height: "100%",
+                  background: "#fff",
+                  overflow: "scroll",
+                }}
+              >
+                {formatLogs.map((log) => {
+                  return this.renderFormatLogs(log);
+                })}
+              </div>
+              <div
+                className="split-view-view visible"
+                style={{
+                  right: "0px",
+                  width: "198px",
+                  height: "100%",
+                  background: "#e4e4e4",
+                  overflow: "scroll",
+                }}
               >
                 <Tree
-                  style={{background: '#e4e4e4'}}
+                  style={{ background: "#e4e4e4" }}
                   showIcon
                   onSelect={this.onSelect}
                   onCheck={this.onCheck}
@@ -96,6 +133,18 @@ class Page extends React.Component {
             </div>
           )}
         </FileDrop>
+      </div>
+    );
+  }
+
+  renderFormatLogs(log, index) {
+    return (
+      <div key={`${log.hash}`}>
+        <span style={{ backgroundColor: "pink", width: '150px',height: '20px' }}>
+          {log.branches}
+        </span>
+        <span>{log.message}</span>
+        <span>{log.hash}</span>
       </div>
     );
   }
