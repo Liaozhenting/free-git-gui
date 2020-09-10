@@ -9,13 +9,13 @@ const shell = window.shell;
 
 const { ipcRenderer } = window.electron;
 const { TreeNode } = Tree;
-function getLog() {
+function getLog(rootPath) {
   // let _cmd = `git log \
   // --date=iso --pretty=format:'{"commit": "%h","author": "%aN <%aE>","date": "%ad","message": "%s","branch": "%T"},' \
   // $@ | \
   // perl -pe 'BEGIN{print "["}; END{print "]\n"}' | \
   // perl -pe 's/},]/}]/'`;
-  let _cmd = `git log --all --decorate --oneline`;
+  let _cmd = `cd ${rootPath} && git log --all --decorate --oneline`;
   return new Promise((resolve, reject) => {
     shell.exec(_cmd, (code, stdout, stderr) => {
       if (code) {
@@ -27,8 +27,8 @@ function getLog() {
   });
 }
 
-async function commit() {
-  let _gitLog = await getLog();
+async function commit(rootPath) {
+  let _gitLog = await getLog(rootPath);
   console.log(_gitLog);
   return _gitLog;
 }
@@ -70,7 +70,7 @@ class Page extends React.Component {
     });
     console.log(treeData);
 
-    let commitLogs = await commit();
+    let commitLogs = await commit(rootPath);
     let formatLogs = commitLogs.map(formatLog);
     console.log(formatLogs);
     this.setState({

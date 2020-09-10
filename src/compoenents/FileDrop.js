@@ -17,7 +17,10 @@ class DropArea extends React.Component {
       let rootName = evt.dataTransfer.files[0].name;
       console.log('rootPath', rootPath);
       console.log('rootName', rootName);
-      const files = await fromEvent(evt);
+      let files = await fromEvent(evt);
+      files = files.filter(file=>{
+        return !file.path.startsWith(`${rootPath}/.git/`)
+      })
       if (this.props.onDrop) {
         this.props.onDrop(files, rootPath, rootName);
       }
