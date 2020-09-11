@@ -3,7 +3,7 @@ import Tree from "antd/lib/tree";
 import { FolderOutlined, FileOutlined } from "@ant-design/icons";
 import FileDrop from "../compoenents/FileDrop";
 import "./index.css";
-import { pathToTree } from "../utils/files";
+import { pathToTree, getFiles} from "../utils/files";
 import trim from "lodash/trim";
 const shell = window.shell;
 
@@ -55,6 +55,14 @@ class Page extends React.Component {
     rootPath: "",
     formatLogs: [],
   };
+
+  componentDidMount(){
+    let dropEvt = localStorage.getItem('dropEvt')
+    if(dropEvt){
+      let originDropEvt = JSON.parse(dropEvt);
+      getFiles(originDropEvt, this.onDrop)
+    }
+  }
 
   onDrop = async (files, rootPath, rooName) => {
     let filterFiles = files.map(({ path }) => {
@@ -140,10 +148,11 @@ class Page extends React.Component {
   renderFormatLogs(log, index) {
     return (
       <div key={`${log.hash}`}>
-        <span style={{ backgroundColor: "pink", width: '150px',height: '20px' }}>
+        <span style={{ backgroundColor: "pink", width: '250px',height: '20px' }}>
           {log.branches}
         </span>
-        <span>{log.message}</span>
+        {!!log.branches && '-------------'}
+        <span style={{width: '200px', height: '20px'}}>{log.message}</span>
         <span>{log.hash}</span>
       </div>
     );
