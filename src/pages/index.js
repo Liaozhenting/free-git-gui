@@ -1,6 +1,7 @@
 import React from "react";
 import Tree from "antd/lib/tree";
 import { FolderOutlined, FileOutlined } from "@ant-design/icons";
+import { ContextMenu, MenuItem, ContextMenuTrigger } from "react-contextmenu";
 import FileDrop from "../compoenents/FileDrop";
 import "./index.css";
 import { pathToTree, getFiles} from "../utils/files";
@@ -9,6 +10,11 @@ const shell = window.shell;
 
 const { ipcRenderer } = window.electron;
 const { TreeNode } = Tree;
+
+function handleClick(e, data) {
+  console.log(data.foo);
+}
+ 
 
 function cmdFactory(_cmd){
   return new Promise((resolve, reject)=>{
@@ -166,20 +172,30 @@ class Page extends React.Component {
             </div>
           )}
         </FileDrop>
+        <ContextMenu id="git-function">
+          <MenuItem data={{foo: 'bar'}} onClick={this.gitSquash}>
+            <div style={{width: '150px', height: '22px', background: 'pink'}}>
+            git squash 
+            </div>
+          </MenuItem>
+        </ContextMenu>
       </div>
     );
   }
 
   renderFormatLogs(log, index) {
     return (
-      <div key={`${log.hash}`}>
-        <span style={{ backgroundColor: "pink", width: '250px',height: '20px' }}>
-          {log.branches}
-        </span>
-        {!!log.branches && '-------------'}
-        <span style={{width: '200px', height: '20px'}}>{log.message}</span>
-        <span>{log.hash}</span>
-      </div>
+      <ContextMenuTrigger id="git-function">
+        <div key={`${log.hash}`} >
+          <span style={{ backgroundColor: "pink", width: '250px',height: '20px' }}>
+            {log.branches}
+          </span>
+          {!!log.branches && '-------------'}
+          <span style={{width: '200px', height: '20px'}}>{log.message}</span>
+          <span>{log.hash}</span>
+        </div>
+      </ContextMenuTrigger>
+      
     );
   }
 }
