@@ -55,11 +55,14 @@ exports.getFiles = async function(evt, callback) {
   let rootName = evt.dataTransfer.files[0].name;
   console.log('rootPath', rootPath);
   console.log('rootName', rootName);
+  localStorage.setItem('rootPath', JSON.stringify(rootPath))
+  localStorage.setItem('rootName', JSON.stringify(rootName))
+  // let files = await fromEvent(evt);
+  // files = files.filter(file => {
+  //   return !file.path.startsWith(`${rootPath}/.git/`)
+  // })
 
-  let files = await fromEvent(evt);
-  files = files.filter(file => {
-    return !file.path.startsWith(`${rootPath}/.git/`)
-  })
+  // callback(files, rootPath, rootName)
 
-  callback(files, rootPath, rootName)
+  callback(rootPath, rootName)
 }

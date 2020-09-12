@@ -9,22 +9,41 @@ const shell = window.shell;
 
 const { ipcRenderer } = window.electron;
 const { TreeNode } = Tree;
-function getLog(rootPath) {
+
+function cmdFactory(_cmd){
+  return new Promise((resolve, reject)=>{
+    shell.exec(_cmd, (code, stdout, stderr) => {
+      if(code){
+        reject(stderr)
+      } else {
+        resolve(stdout)
+      }
+    })
+  })
+}
+
+/**
+ * 获取git log
+ * @param {string} rootPath 
+ */
+async function getLog(rootPath) {
   // let _cmd = `git log \
   // --date=iso --pretty=format:'{"commit": "%h","author": "%aN <%aE>","date": "%ad","message": "%s","branch": "%T"},' \
   // $@ | \
   // perl -pe 'BEGIN{print "["}; END{print "]\n"}' | \
   // perl -pe 's/},]/}]/'`;
   let _cmd = `cd ${rootPath} && git log --all --decorate --oneline`;
-  return new Promise((resolve, reject) => {
-    shell.exec(_cmd, (code, stdout, stderr) => {
-      if (code) {
-        reject(stderr);
-      } else {
-        resolve(stdout.split("\n"));
-      }
-    });
-  });
+  let result = await cmdFactory(_cmd)
+  return result.split("\n")
+}
+
+/**
+ * 合并log
+ */
+async function gitRebase(rootPath){
+  let _cmd = `cd ${rootPath} && git rebase -i HEAD~1`;
+  let result = await cmdFactory(_cmd);
+  return result
 }
 
 async function commit(rootPath) {
@@ -57,32 +76,38 @@ class Page extends React.Component {
   };
 
   componentDidMount(){
-    let dropEvt = localStorage.getItem('dropEvt')
-    if(dropEvt){
-      let originDropEvt = JSON.parse(dropEvt);
-      getFiles(originDropEvt, this.onDrop)
+    let rootPath = localStorage.getItem('rootPath');
+    let rootName = localStorage.getItem('rootName');
+    if(rootPath){
+      let originRootPath = JSON.parse(rootPath);
+      let originRootName = JSON.parse(rootName);
+      this.onDrop(originRootPath, originRootName);
     }
   }
 
-  onDrop = async (files, rootPath, rooName) => {
-    let filterFiles = files.map(({ path }) => {
-      return path.replace(rootPath, "");
-    });
-    let treeData = pathToTree(filterFiles, (newNode) => {
-      if (newNode.isFolder) {
-        newNode.icon = <FolderOutlined />;
-      } else {
-        newNode.icon = <FileOutlined />;
-      }
-      return newNode;
-    });
-    console.log(treeData);
+  onDrop = async (rootPath, rooName) => {
+
+    /* 文件结构start */
+    // let filterFiles = files.map(({ path }) => {
+    //   return path.replace(rootPath, "");
+    // });
+    // let treeData = pathToTree(filterFiles, (newNode) => {
+    //   if (newNode.isFolder) {
+    //     newNode.icon = <FolderOutlined />;
+    //   } else {
+    //     newNode.icon = <FileOutlined />;
+    //   }
+    //   return newNode;
+    // });
+    // console.log(treeData);
+    /* 文件结构start end*/
 
     let commitLogs = await commit(rootPath);
+    console.log(gitRebase(rootPath))
     let formatLogs = commitLogs.map(formatLog);
     console.log(formatLogs);
     this.setState({
-      treeData,
+      // treeData,
       onWorking: true,
       rootPath,
       formatLogs: formatLogs,

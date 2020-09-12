@@ -15,7 +15,6 @@ class DropArea extends React.Component {
       evt.preventDefault();
       evt.stopPropagation();
       getFiles(evt, this.props.onDrop)
-      localStorage.setItem('dropEvt', JSON.stringify(evt))
     });
   }
   componentWillUnmount(){
