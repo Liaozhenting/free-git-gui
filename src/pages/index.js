@@ -50,7 +50,7 @@ async function execAllCommand(_cmd){
     console.log('execAllCommandErr', err)
   }
   if(commandArr.length){
-    setTimeout(()=>execAllCommand(commandArr), 2000)
+    await execAllCommand(commandArr)
   }
   
 }
@@ -156,9 +156,9 @@ class Page extends React.Component {
   gitSquash = async ()=>{
     let {formatLogs, selectedLogIndex, rootName} = this.state;
     let message = formatLogs[selectedLogIndex].message;
-    let _cmd = `cd ${this.state.rootPath} && git reset --mixed HEAD~${selectedLogIndex}
-    git add .
-    git commit -m '${message}'
+    let _cmd = `cd ${this.state.rootPath} && git reset --mixed HEAD~${selectedLogIndex+1}
+    cd ${this.state.rootPath} && git add .
+    cd ${this.state.rootPath} && git commit -m '${message}'
     `;
     execAllCommand(_cmd);
     setTimeout(()=>{
@@ -237,6 +237,7 @@ class Page extends React.Component {
           </span>
           {!!log.branches && '-------------'}
           <span style={{width: '200px', height: '20px'}}>{log.message}</span>
+          -----
           <span>{log.hash}</span>
         </div>
       </ContextMenuTrigger>
