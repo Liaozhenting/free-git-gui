@@ -43,7 +43,7 @@ async function execAllCommand(_cmd){
     commandArr = _cmd
   }
   console.log('commandArr', commandArr)
-  await cmdFactory(commandArr.shift())
+  await cmdFactory(commandArr.shift().trim())
   if(commandArr.length){
     setTimeout(()=>execAllCommand(commandArr), 2000)
   }
@@ -151,7 +151,7 @@ class Page extends React.Component {
   gitSquash = async ()=>{
     let {formatLogs, selectedLogIndex, rootName} = this.state;
     let message = formatLogs[selectedLogIndex].message;
-    let _cmd = `cd ${this.state.rootPath} && git reset --mixed HEAD~${selectedLogIndex+1}
+    let _cmd = `cd ${this.state.rootPath} && git reset --mixed HEAD~${selectedLogIndex}
     git add .
     git commit -m '${message}'
     `;
