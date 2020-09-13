@@ -1,5 +1,5 @@
 import React from "react";
-import { fromEvent } from "file-selector";
+// import { fromEvent } from "file-selector";
 import {getFiles} from '../utils/files'
 class DropArea extends React.Component {
   constructor(props) {
