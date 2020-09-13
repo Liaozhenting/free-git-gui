@@ -43,7 +43,12 @@ async function execAllCommand(_cmd){
     commandArr = _cmd
   }
   console.log('commandArr', commandArr)
-  await cmdFactory(commandArr.shift().trim())
+  try{
+
+    await cmdFactory(commandArr.shift().trim())
+  } catch(err){
+    console.log('execAllCommandErr', err)
+  }
   if(commandArr.length){
     setTimeout(()=>execAllCommand(commandArr), 2000)
   }
