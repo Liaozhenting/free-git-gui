@@ -6,6 +6,7 @@ import FileDrop from "../compoenents/FileDrop";
 import "./index.css";
 import { pathToTree, getFiles} from "../utils/files";
 import trim from "lodash/trim";
+import each from "lodash/each";
 const shell = window.shell;
 
 const { ipcRenderer } = window.electron;
@@ -29,6 +30,27 @@ function cmdFactory(_cmd){
 }
 
 /**
+ * 分割命令，全部执行
+ * @param {string|string[]} _cmd 
+ */
+async function execAllCommand(_cmd){
+  console.log('_cdm', _cmd)
+  let commandArr
+  if(typeof _cmd === 'string'){
+    commandArr = _cmd.trim().split('\n');
+    
+  } else if(Array.isArray(_cmd)){
+    commandArr = _cmd
+  }
+  console.log('commandArr', commandArr)
+  await cmdFactory(commandArr.shift())
+  if(commandArr.length){
+    setTimeout(()=>execAllCommand(commandArr), 500)
+  }
+  
+}
+
+/**
  * 获取git log
  * @param {string} rootPath 
  */
@@ -38,19 +60,12 @@ async function getLog(rootPath) {
   // $@ | \
   // perl -pe 'BEGIN{print "["}; END{print "]\n"}' | \
   // perl -pe 's/},]/}]/'`;
-  let _cmd = `cd ${rootPath} && git log --all --decorate --oneline`;
+  let _cmd = `cd ${rootPath}
+  git log --all --decorate --oneline`;
   let result = await cmdFactory(_cmd)
-  return result.split("\n")
+  return result.trim().split("\n")
 }
 
-/**
- * 合并log
- */
-async function gitRebase(rootPath){
-  let _cmd = `cd ${rootPath} && git rebase -i HEAD~1`;
-  let result = await cmdFactory(_cmd);
-  return result
-}
 
 async function commit(rootPath) {
   let _gitLog = await getLog(rootPath);
@@ -78,7 +93,9 @@ class Page extends React.Component {
     originData: [],
     onWorking: false,
     rootPath: "",
+    rootName: "",
     formatLogs: [],
+    selectedLogIndex: -1,
   };
 
   componentDidMount(){
@@ -91,7 +108,7 @@ class Page extends React.Component {
     }
   }
 
-  onDrop = async (rootPath, rooName) => {
+  onDrop = async (rootPath, rootName) => {
 
     /* 文件结构start */
     // let filterFiles = files.map(({ path }) => {
@@ -109,20 +126,42 @@ class Page extends React.Component {
     /* 文件结构start end*/
 
     let commitLogs = await commit(rootPath);
-    console.log(gitRebase(rootPath))
     let formatLogs = commitLogs.map(formatLog);
     console.log(formatLogs);
     this.setState({
       // treeData,
       onWorking: true,
       rootPath,
+      rootName,
       formatLogs: formatLogs,
     });
   };
 
-  onSelect = (selectedKeys, info) => {
-    console.log("selected", selectedKeys, info);
+
+  onSelect = (index) => {
+    console.log(index, this.state)
+    let message = this.state.formatLogs[index].message;
+    console.log("selectedLog", message);
+    this.setState({selectedLogIndex: index})
   };
+
+  /**
+   * 合并log
+   */
+  gitSquash = async ()=>{
+    let {formatLogs, selectedLogIndex, rootName} = this.state;
+    let message = formatLogs[selectedLogIndex].message;
+    let _cmd = `cd ${this.state.rootPath} && git reset --mixed HEAD~${selectedLogIndex+1}
+    git add .
+    git commit -m '${message}'
+    `;
+
+    execAllCommand(_cmd);
+    setTimeout(()=>{
+      this.onDrop(this.state.rootPath, rootName)
+    }, 1000)
+  }
+
 
   onCheck = (checkedKeys, info) => {
     console.log("onCheck", checkedKeys, info);
@@ -147,8 +186,8 @@ class Page extends React.Component {
                   overflow: "scroll",
                 }}
               >
-                {formatLogs.map((log) => {
-                  return this.renderFormatLogs(log);
+                {formatLogs.map((log, index) => {
+                  return this.renderFormatLogs(log, index);
                 })}
               </div>
               <div
@@ -184,9 +223,11 @@ class Page extends React.Component {
   }
 
   renderFormatLogs(log, index) {
+    let {selectedLogIndex} = this.state;
     return (
       <ContextMenuTrigger id="git-function">
-        <div key={`${log.hash}`} >
+        <div key={`${log.hash}`} onClick={()=> this.onSelect(index)} style={ index === selectedLogIndex? {backgroundColor: '#c2ccd0'}: null}>
+      
           <span style={{ backgroundColor: "pink", width: '250px',height: '20px' }}>
             {log.branches}
           </span>
