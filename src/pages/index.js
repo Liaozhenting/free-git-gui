@@ -45,7 +45,7 @@ async function execAllCommand(_cmd){
   console.log('commandArr', commandArr)
   await cmdFactory(commandArr.shift())
   if(commandArr.length){
-    setTimeout(()=>execAllCommand(commandArr), 500)
+    setTimeout(()=>execAllCommand(commandArr), 2000)
   }
   
 }
@@ -155,7 +155,6 @@ class Page extends React.Component {
     git add .
     git commit -m '${message}'
     `;
-
     execAllCommand(_cmd);
     setTimeout(()=>{
       this.onDrop(this.state.rootPath, rootName)
