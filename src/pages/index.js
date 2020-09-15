@@ -79,7 +79,7 @@ async function commit(rootPath) {
 }
 
 function formatLog(stdout) {
-  const logReg = /^([0-9a-zA-Z]{7})( \(.*\))?( .*)$/;
+  const logReg = /^([0-9a-zA-Z]{7,8})( \(.*\))?( .*)$/;
   const logRes = logReg.exec(stdout);
   console.log(logRes);
   if (!logRes) {
