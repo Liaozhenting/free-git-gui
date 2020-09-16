@@ -1,6 +1,6 @@
-const {fromEvent} = require('file-selector')
+// const {fromEvent} = require('file-selector')
 
-exports.pathToTree = (input, callback) => {
+export const pathToTree = (input, callback) => {
   let root = [];
   for (let i = 0; i < input.length; i++) {
     let chain = input[i].split("/");
@@ -50,7 +50,7 @@ exports.pathToTree = (input, callback) => {
   return root;
 };
 
-exports.getFiles = async function(evt, callback) {
+export async function getFiles (evt, callback) {
   let rootPath = evt.dataTransfer.files[0].path;
   let rootName = evt.dataTransfer.files[0].name;
   console.log('rootPath', rootPath);
@@ -66,3 +66,7 @@ exports.getFiles = async function(evt, callback) {
 
   callback(rootPath, rootName)
 }
+
+// exports.getFiles = getFiles;
+
+
