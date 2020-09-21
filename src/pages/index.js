@@ -7,6 +7,7 @@ import "./index.css";
 import { pathToTree, getFiles} from "../utils/files";
 import trim from "lodash/trim";
 import each from "lodash/each";
+import find from "lodash/find";
 const shell = window.shell;
 
 const { ipcRenderer } = window.electron;
@@ -56,7 +57,7 @@ async function execAllCommand(_cmd){
 }
 
 /**
- * 获取git log
+ * 获取git log，参考ungit
  * @param {string} rootPath 
  */
 async function getLog(rootPath) {
@@ -66,16 +67,49 @@ async function getLog(rootPath) {
   // perl -pe 'BEGIN{print "["}; END{print "]\n"}' | \
   // perl -pe 's/},]/}]/'`;
   let _cmd = `cd ${rootPath}
-  git log --all --decorate --oneline`;
+  git log --cc --decorate=full --show-signature --date=default --pretty=fuller -z --branches --tags --remotes --parents --no-notes --numstat --date-order`;
   let result = await cmdFactory(_cmd)
   return result.trim().split("\n")
 }
 
 
-async function commit(rootPath) {
+async function getCommit(rootPath) {
   let _gitLog = await getLog(rootPath);
   console.log(_gitLog);
-  return _gitLog;
+  return parseCommitLog(_gitLog);
+}
+
+function parseCommitLog (data){
+  const commits = [];
+  let currentCommmit;
+  const parseCommitLine = (row) => {
+    if (!row.trim()) return;
+    currentCommmit = { refs: [], fileLineDiffs: [], additions: 0, deletions: 0 };
+    const refStartIndex = row.indexOf('(');
+    const sha1s = row
+      .substring(0, refStartIndex < 0 ? row.length : refStartIndex)
+      .split(' ')
+      .slice(1)
+      .filter((sha1) => {
+        return sha1 && sha1.length;
+      });
+    currentCommmit.sha1 = sha1s[0];
+    currentCommmit.parents = sha1s.slice(1);
+    if (refStartIndex > 0) {
+      const refs = row.substring(refStartIndex + 1, row.length - 1);
+      currentCommmit.refs = refs.split(/ -> |, /g);
+    }
+    currentCommmit.isHead = !!find(currentCommmit.refs, (item) => {
+      return item.trim() === 'HEAD';
+    });
+    commits.isHeadExist = commits.isHeadExist || currentCommmit.isHead;
+    commits.push(currentCommmit);
+  };
+  const rows = data.split('\n');
+  rows.forEach((row)=>{
+    parseCommitLine(row);
+  })
+  return commits;
 }
 
 function formatLog(stdout) {
@@ -130,7 +164,7 @@ class Page extends React.Component {
     // console.log(treeData);
     /* 文件结构start end*/
 
-    let commitLogs = await commit(rootPath);
+    let commitLogs = await getCommit(rootPath);
     let formatLogs = commitLogs.map(formatLog);
     console.log(formatLogs);
     this.setState({
