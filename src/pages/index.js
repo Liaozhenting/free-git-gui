@@ -69,13 +69,13 @@ async function getLog(rootPath) {
   let _cmd = `cd ${rootPath}
   git log --cc --decorate=full --show-signature --date=default --pretty=fuller -z --branches --tags --remotes --parents --no-notes --numstat --date-order`;
   let result = await cmdFactory(_cmd)
-  return result.trim().split("\n")
+  return result.trim()
 }
 
 
 async function getCommit(rootPath) {
   let _gitLog = await getLog(rootPath);
-  console.log(_gitLog);
+  console.log('_gitLog', _gitLog);
   return parseCommitLog(_gitLog);
 }
 
@@ -215,6 +215,7 @@ class Page extends React.Component {
             <div>
               工作中
               <p>根路径{rootPath}</p>
+              <svg id="svg-canvas" width={1000} height={800}></svg>
               <div
                 className="split-view-view visible"
                 style={{
@@ -278,6 +279,129 @@ class Page extends React.Component {
       
     );
   }
+}
+
+function normalize(data, key = 'id') {
+  const transform = obj => {
+    let id = obj[key];
+    return {
+      [id]: obj
+    };
+  };
+
+  if (Array.isArray(data)) {
+    let result = data.reduce((partial, d) => {
+      return {
+        ...partial,
+        ...transform(d)
+      };
+    }, {});
+    return result;
+  }
+
+  return transform(data);
+}
+
+function main(){
+  var g = new dagreD3.graphlib.Graph()
+    .setGraph({})
+    .setDefaultEdgeLabel(function () { return {}; });
+
+
+  g.nodes().forEach(function (v) {
+    var node = g.node(v);
+    // Round the corners of the nodes
+    node.rx = node.ry = 5;
+  });
+
+  function normalize(data, key = 'id') {
+    const transform = obj => {
+      let id = obj[key];
+      return {
+        [id]: obj
+      };
+    };
+
+    if (Array.isArray(data)) {
+      let result = data.reduce((partial, d) => {
+        return {
+          ...partial,
+          ...transform(d)
+        };
+      }, {});
+      return result;
+    }
+
+    return transform(data);
+  }
+
+  console.log('gitlog', gitlog)
+
+  const gitLogMap = normalize(gitlog, 'sha1');
+
+  console.log('gitLogMap', gitLogMap)
+
+  const graph = {}
+  gitlog.forEach(ele => {
+    console.log('ele.parents', ele.parents)
+    if(!ele.parents) return 
+    ele.parents.forEach(parent => {
+      if (graph[parent]) {
+        graph[parent].push(ele.sha1);
+        graph[parent] = _.uniq(graph[parent])
+      } else {
+        graph[parent] = [ele.sha1]
+      }
+      console.log('graph', { ...graph })
+    })
+  })
+
+  console.log('graph', graph)
+
+  // for (let sha1 in gitlog) {
+  //   g.setNode(sha1, {
+  //     label: sha1,
+  //     class: "type-no",
+  //     id: "status" + sha1
+  //   });
+  // }
+  gitlog.forEach(log=>{
+    g.setNode(log.sha1, {
+      label: '',
+      class: "type-no",
+      id: "status" + log.sha1
+    });
+  })
+
+
+  // Set up edges, no special attributes.
+
+  for (let sha1 in graph) {
+    if (graph[sha1]) {
+
+      graph[sha1].forEach(nextSha1 => {
+        console.log('set edge: ', sha1, nextSha1)
+        g.setEdge(sha1, nextSha1)
+      })
+    }
+  }
+
+
+  // Create the renderer
+  var render = new dagreD3.render();
+
+  // Set up an SVG group so that we can translate the final graph.
+  var svg = d3.select("svg"),
+    svgGroup = svg.append("g");
+
+  // Run the renderer. This is what draws the final graph.
+  render(d3.select("svg g"), g);
+
+  // var xCenterOffset = (svg.attr("width") - g.graph().width) / 2;
+  // svgGroup.attr("transform", "translate(" + xCenterOffset + ", 20)");
+  svg.attr("width", g.graph().width + 20);
+  svg.attr("height", g.graph().height + 40);
+
 }
 
 export default Page;

@@ -7,3 +7,32 @@
   white-space: normal;
   position: absolute;
 }
+
+g.type-current>rect {
+  fill: #1E9FFF;
+}
+
+g.type-success>rect {
+  fill: green;
+}
+
+g.type-fail>rect {
+  fill: red;
+}
+
+text {
+  font-weight: 300;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serf;
+  font-size: 14px;
+}
+
+.node rect {
+  stroke: #999;
+  fill: #fff;
+  stroke-width: 1.5px;
+}
+
+.edgePath path {
+  stroke: #333;
+  stroke-width: 1.5px;
+}
