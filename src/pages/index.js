@@ -5,6 +5,7 @@ import { ContextMenu, MenuItem, ContextMenuTrigger } from "react-contextmenu";
 import FileDrop from "../compoenents/FileDrop";
 import "./index.css";
 import { pathToTree, getFiles} from "../utils/files";
+import _ from 'lodash';
 import trim from "lodash/trim";
 import each from "lodash/each";
 import find from "lodash/find";
@@ -67,16 +68,21 @@ async function getLog(rootPath) {
   // perl -pe 'BEGIN{print "["}; END{print "]\n"}' | \
   // perl -pe 's/},]/}]/'`;
   let _cmd = `cd ${rootPath}
-  git log --cc --decorate=full --show-signature --date=default --pretty=fuller -z --branches --tags --remotes --parents --no-notes --numstat --date-order`;
+  git log \
+  --pretty=format:'{"commit": "%h","author": "%aN <%aE>","date": "%ad","message": "%s","branch": "%D", "parent": "%P"}' --abbrev-commit --date=relative \
+  $@ | \
+  perl -pe 'BEGIN{print "["}; END{print "]\n"}' | \
+  perl -pe 's/},]/}]/'`;
   let result = await cmdFactory(_cmd)
-  return result.trim()
+  return result
 }
 
 
 async function getCommit(rootPath) {
   let _gitLog = await getLog(rootPath);
   console.log('_gitLog', _gitLog);
-  return parseCommitLog(_gitLog);
+  // return parseCommitLog(_gitLog);
+  return JSON.parse(_gitLog)
 }
 
 function parseCommitLog (data){
@@ -167,6 +173,7 @@ class Page extends React.Component {
     let commitLogs = await getCommit(rootPath);
     let formatLogs = commitLogs.map(formatLog);
     console.log(formatLogs);
+    // main(formatLogs);
     this.setState({
       // treeData,
       onWorking: true,
@@ -302,8 +309,8 @@ function normalize(data, key = 'id') {
   return transform(data);
 }
 
-function main(){
-  var g = new dagreD3.graphlib.Graph()
+function main(gitlog){
+  var g = new window.dagreD3.graphlib.Graph()
     .setGraph({})
     .setDefaultEdgeLabel(function () { return {}; });
 
@@ -388,14 +395,14 @@ function main(){
 
 
   // Create the renderer
-  var render = new dagreD3.render();
+  var render = new window.dagreD3.render();
 
   // Set up an SVG group so that we can translate the final graph.
-  var svg = d3.select("svg"),
+  var svg = window.d3.select("svg"),
     svgGroup = svg.append("g");
 
   // Run the renderer. This is what draws the final graph.
-  render(d3.select("svg g"), g);
+  render(window.d3.select("svg g"), g);
 
   // var xCenterOffset = (svg.attr("width") - g.graph().width) / 2;
   // svgGroup.attr("transform", "translate(" + xCenterOffset + ", 20)");
