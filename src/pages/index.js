@@ -5,6 +5,7 @@ import { ContextMenu, MenuItem, ContextMenuTrigger } from "react-contextmenu";
 import FileDrop from "../compoenents/FileDrop";
 import "./index.css";
 import { pathToTree, getFiles} from "../utils/files";
+import fileType from "../utils/filt-type";
 import _ from 'lodash';
 import trim from "lodash/trim";
 import each from "lodash/each";
@@ -69,10 +70,8 @@ async function getLog(rootPath) {
   // perl -pe 's/},]/}]/'`;
   let _cmd = `cd ${rootPath}
   git log \
-  --pretty=format:'{"commit": "%h","author": "%aN <%aE>","date": "%ad","message": "%s","branch": "%D", "parent": "%P"}' --abbrev-commit --date=relative \
-  $@ | \
-  perl -pe 'BEGIN{print "["}; END{print "]\n"}' | \
-  perl -pe 's/},]/}]/'`;
+  --cc --decorate=full --show-signature --date=default --pretty=fuller -z --branches --tags --remotes --parents --no-notes --numstat --date-order
+  `;
   let result = await cmdFactory(_cmd)
   return result
 }
@@ -81,9 +80,66 @@ async function getLog(rootPath) {
 async function getCommit(rootPath) {
   let _gitLog = await getLog(rootPath);
   console.log('_gitLog', _gitLog);
-  // return parseCommitLog(_gitLog);
-  return JSON.parse(_gitLog)
+  _gitLog = parseCommitLog(_gitLog)
+  return _gitLog
 }
+
+const fileChangeRegex = /(?<additions>[\d-]+)\t(?<deletions>[\d-]+)\t((?<fileName>[^\x00]+?)\x00|\x00(?<oldFileName>[^\x00]+?)\x00(?<newFileName>[^\x00]+?)\x00)/g;
+
+const authorRegexp = /([^<]+)<([^>]+)>/;
+const gitLogHeaders = {
+  Author: (currentCommmit, author) => {
+    const capture = authorRegexp.exec(author);
+    if (capture) {
+      currentCommmit.authorName = capture[1].trim();
+      currentCommmit.authorEmail = capture[2].trim();
+    } else {
+      currentCommmit.authorName = author;
+    }
+  },
+  Commit: (currentCommmit, author) => {
+    const capture = authorRegexp.exec(author);
+    if (capture) {
+      currentCommmit.committerName = capture[1].trim();
+      currentCommmit.committerEmail = capture[2].trim();
+    } else {
+      currentCommmit.committerName = author;
+    }
+  },
+  AuthorDate: (currentCommmit, date) => {
+    currentCommmit.authorDate = date;
+  },
+  CommitDate: (currentCommmit, date) => {
+    currentCommmit.commitDate = date;
+  },
+  Reflog: (currentCommmit, data) => {
+    currentCommmit.reflogId = /\{(.*?)\}/.exec(data)[1];
+    currentCommmit.reflogName = data.substring(0, data.indexOf(' ')).replace('refs/', '');
+    const author = data.substring(data.indexOf('(') + 1, data.length - 1);
+    const capture = authorRegexp.exec(author);
+    if (capture) {
+      currentCommmit.reflogAuthorName = capture[1].trim();
+      currentCommmit.reflogAuthorEmail = capture[2].trim();
+    } else {
+      currentCommmit.reflogAuthorName = author;
+    }
+  },
+  gpg: (currentCommit, data) => {
+    if (data.startsWith('Signature made')) {
+      // extract sign date
+      currentCommit.signatureDate = data.slice('Signature made '.length);
+    } else if (data.indexOf('Good signature from') > -1) {
+      // fully verified.
+      currentCommit.signatureMade = data
+        .slice('Good signature from '.length)
+        .replace('[ultimate]', '')
+        .trim();
+    } else if (data.indexOf("Can't check signature") > -1) {
+      // pgp signature attempt is made but failed to verify
+      delete currentCommit.signatureDate;
+    }
+  },
+};
 
 function parseCommitLog (data){
   const commits = [];
@@ -105,16 +161,88 @@ function parseCommitLog (data){
       const refs = row.substring(refStartIndex + 1, row.length - 1);
       currentCommmit.refs = refs.split(/ -> |, /g);
     }
-    currentCommmit.isHead = !!find(currentCommmit.refs, (item) => {
+    currentCommmit.isHead = !!_.find(currentCommmit.refs, (item) => {
       return item.trim() === 'HEAD';
     });
     commits.isHeadExist = commits.isHeadExist || currentCommmit.isHead;
     commits.push(currentCommmit);
+    parser = parseHeaderLine;
   };
+  const parseHeaderLine = (row) => {
+    if (row.trim() == '') {
+      parser = parseCommitMessage;
+    } else {
+      for (const key in gitLogHeaders) {
+        if (row.indexOf(`${key}: `) == 0) {
+          gitLogHeaders[key](currentCommmit, row.slice(`${key}: `.length).trim());
+          return;
+        }
+      }
+    }
+  };
+  const parseCommitMessage = (row, index) => {
+    if (currentCommmit.message) currentCommmit.message += '\n';
+    else currentCommmit.message = '';
+    currentCommmit.message += row.trim();
+    if (/[\d-]+\t[\d-]+\t.+/g.test(rows[index + 1])) {
+      parser = parseFileChanges;
+      return;
+    }
+    if (rows[index + 1] && rows[index + 1].indexOf('\x00commit ') == 0) {
+      parser = parseCommitLine;
+      return;
+    }
+  };
+  const parseFileChanges = (row, index) => {
+    // git log is using -z so all the file changes are on one line
+    // merge commits start the file changes with a null
+    if (row[0] === '\x00') {
+      row = row.slice(1);
+    }
+    fileChangeRegex.lastIndex = 0;
+    while (row[fileChangeRegex.lastIndex] && row[fileChangeRegex.lastIndex] !== '\x00') {
+      const match = fileChangeRegex.exec(row);
+      const fileName = match.groups.fileName || match.groups.newFileName;
+      const oldFileName = match.groups.oldFileName || match.groups.fileName;
+      let displayName;
+      if (match.groups.oldFileName) {
+        displayName = `${match.groups.oldFileName} → ${match.groups.newFileName}`;
+      } else {
+        displayName = fileName;
+      }
+      currentCommmit.fileLineDiffs.push({
+        additions: match.groups.additions,
+        deletions: match.groups.deletions,
+        fileName: fileName,
+        oldFileName: oldFileName,
+        displayName: displayName,
+        type: fileType(fileName),
+      });
+    }
+    const nextRow = row.slice(fileChangeRegex.lastIndex + 1);
+    for (const fileLineDiff of currentCommmit.fileLineDiffs) {
+      if (!isNaN(parseInt(fileLineDiff.additions, 10))) {
+        currentCommmit.additions += fileLineDiff.additions = parseInt(fileLineDiff.additions, 10);
+      }
+      if (!isNaN(parseInt(fileLineDiff.deletions, 10))) {
+        currentCommmit.deletions += fileLineDiff.deletions = parseInt(fileLineDiff.deletions, 10);
+      }
+    }
+    parser = parseCommitLine;
+    if (nextRow) {
+      parser(nextRow, index);
+    }
+    return;
+  };
+  let parser = parseCommitLine;
   const rows = data.split('\n');
-  rows.forEach((row)=>{
-    parseCommitLine(row);
-  })
+  rows.forEach((row, index) => {
+    parser(row, index);
+  });
+
+  commits.forEach((commit) => {
+    commit.message = typeof commit.message === 'string' ? commit.message.trim() : '';
+  });
   return commits;
 }
 
@@ -171,7 +299,8 @@ class Page extends React.Component {
     /* 文件结构start end*/
 
     let commitLogs = await getCommit(rootPath);
-    let formatLogs = commitLogs.map(formatLog);
+    // let formatLogs = commitLogs.map(formatLog);
+    let formatLogs = commitLogs
     console.log(formatLogs);
     // main(formatLogs);
     this.setState({
