@@ -59,7 +59,7 @@ async function execAllCommand(_cmd){
 }
 
 /**
- * 获取git log，参考ungit
+ * 获取git log，参考 ungit https://github.com/FredrikNoren/ungit
  * @param {string} rootPath 
  */
 async function getLog(rootPath) {
@@ -301,8 +301,8 @@ class Page extends React.Component {
     let commitLogs = await getCommit(rootPath);
     // let formatLogs = commitLogs.map(formatLog);
     let formatLogs = commitLogs
-    console.log(formatLogs);
-    // main(formatLogs);
+    console.log('formatLogs', formatLogs);
+    setTimeout(()=>main(formatLogs),500);
     this.setState({
       // treeData,
       onWorking: true,
@@ -399,17 +399,18 @@ class Page extends React.Component {
 
   renderFormatLogs(log, index) {
     let {selectedLogIndex} = this.state;
+
     return (
-      <ContextMenuTrigger id="git-function">
-        <div key={`${log.hash}`} onClick={()=> this.onSelect(index)} style={ index === selectedLogIndex? {backgroundColor: '#c2ccd0'}: null}>
+      <ContextMenuTrigger id="git-function" key={`${log.sha1}`}>
+        <div  onClick={()=> this.onSelect(index)} style={ index === selectedLogIndex? {backgroundColor: '#c2ccd0'}: null}>
       
           <span style={{ backgroundColor: "pink", width: '250px',height: '20px' }}>
-            {log.branches}
+            {log.refs}
           </span>
-          {!!log.branches && '-------------'}
+          {!!log.refs && '-------------'}
           <span style={{width: '200px', height: '20px'}}>{log.message}</span>
           -----
-          <span>{log.hash}</span>
+          <span>{log.sha1}</span>
         </div>
       </ContextMenuTrigger>
       
