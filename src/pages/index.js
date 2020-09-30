@@ -418,30 +418,10 @@ class Page extends React.Component {
   }
 }
 
-function normalize(data, key = 'id') {
-  const transform = obj => {
-    let id = obj[key];
-    return {
-      [id]: obj
-    };
-  };
-
-  if (Array.isArray(data)) {
-    let result = data.reduce((partial, d) => {
-      return {
-        ...partial,
-        ...transform(d)
-      };
-    }, {});
-    return result;
-  }
-
-  return transform(data);
-}
-
 function main(gitlog){
   var g = new window.dagreD3.graphlib.Graph()
-    .setGraph({})
+    .setGraph({align: 'DL'})
+    // .setGraph({})
     .setDefaultEdgeLabel(function () { return {}; });
 
 
@@ -451,32 +431,8 @@ function main(gitlog){
     node.rx = node.ry = 5;
   });
 
-  function normalize(data, key = 'id') {
-    const transform = obj => {
-      let id = obj[key];
-      return {
-        [id]: obj
-      };
-    };
-
-    if (Array.isArray(data)) {
-      let result = data.reduce((partial, d) => {
-        return {
-          ...partial,
-          ...transform(d)
-        };
-      }, {});
-      return result;
-    }
-
-    return transform(data);
-  }
 
   console.log('gitlog', gitlog)
-
-  const gitLogMap = normalize(gitlog, 'sha1');
-
-  console.log('gitLogMap', gitLogMap)
 
   const graph = {}
   gitlog.forEach(ele => {
@@ -494,17 +450,9 @@ function main(gitlog){
   })
 
   console.log('graph', graph)
-
-  // for (let sha1 in gitlog) {
-  //   g.setNode(sha1, {
-  //     label: sha1,
-  //     class: "type-no",
-  //     id: "status" + sha1
-  //   });
-  // }
   gitlog.forEach(log=>{
     g.setNode(log.sha1, {
-      label: '',
+      label: log.message,
       class: "type-no",
       id: "status" + log.sha1
     });
