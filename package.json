@@ -15,7 +15,7 @@
     "react": "^16.13.1",
     "react-contextmenu": "^2.14.0",
     "react-dom": "^16.13.1",
-    "react-scripts": "3.4.1",
+    "react-scripts": "5.0.1",
     "shelljs": "^0.8.4"
   },
   "devDependencies": {
